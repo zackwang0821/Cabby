@@ -2,7 +2,7 @@ from flask import Flask, request, redirect, url_for, render_template
 import os
 
 app = Flask(__name__)
-UPLOAD_FOLDER = r'C:\Cabby\Folder'
+UPLOAD_FOLDER = r'Folder'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/')

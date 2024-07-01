@@ -1,5 +1,5 @@
-$folderPath = "C:\Cabby\Folder"
-$scriptPath = "C:\Cabby\mail_notification.py"
+$folderPath = "Folder"
+$scriptPath = "mail_notification.py"
 
 $filter = '*.*'
 

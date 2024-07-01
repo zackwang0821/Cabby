@@ -14,7 +14,7 @@ def send_email(subject, body, recipients):
 
 subject = "(Test)Your signed files are ready"
 body = "Your Microsoft cab sign is ready."
-recipients = "wang.zack@inventec.com"
+recipients = "iecdockingmcuteam@inventec.com"
 
 
 send_email(subject, body, recipients)
