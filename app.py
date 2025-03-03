@@ -41,21 +41,30 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 @app.route('/')
+@login_required
 def index():
-    if current_user.is_authenticated:
-        return render_template('index.html')
-    return redirect(url_for('login'))
+    print('Index route accessed')
+    return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
+        print('Form validated')
         user = User.query.filter_by(email=form.email.data).first()
-        if user and bcrypt.check_password_hash(user.password, form.password.data):
-            login_user(user)
-            return redirect(url_for('index'))
+        if user:
+            print('User found')
+            if bcrypt.check_password_hash(user.password, form.password.data):
+                print('Password correct')
+                login_user(user)
+                return redirect(url_for('index'))
+            else:
+                print('Password incorrect')
         else:
-            flash('Login Unsuccessful. Please check email and password', 'danger')
+            print('User not found')
+        flash('Login Unsuccessful. Please check email and password', 'danger')
+    else:
+        print('Form not validated')
     return render_template('login.html', form=form)
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -88,6 +97,23 @@ def upload_file():
         filename = file.filename
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         return 'File uploaded successfully'
+
+@app.route('/execute', methods=['POST'])
+@login_required
+def execute_app():
+    argument = request.form.get('argument', '')
+    command = ['hello.exe']
+    if argument:
+        print('Executing app with argument: ' + argument, 'info')
+        argument = argument.split(' ')
+        command.extend(argument)
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        flash('App executed successfully: ' + result.stdout, 'success')
+    except subprocess.CalledProcessError as e:
+        flash('Failed to execute app: ' + e.stderr, 'danger')
+    print(result.stdout)
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     with app.app_context():
