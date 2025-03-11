@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for, render_template, flash
+from flask import Flask, request, redirect, url_for, render_template, flash, session
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -96,6 +96,9 @@ def upload_file():
     if file:
         filename = file.filename
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        
+        session['uploaded_filename'] = file.filename
+        
         return 'File uploaded successfully'
 
 @app.route('/execute', methods=['POST'])
@@ -103,17 +106,30 @@ def upload_file():
 def execute_app():
     argument = request.form.get('argument', '')
     command = ['hello.exe']
+    
+    filename = session.get('uploaded_filename', None)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
     if argument:
         print('Executing app with argument: ' + argument, 'info')
-        argument = argument.split(' ')
-        command.extend(argument)
+    else :
+        argument = 'sign /a /n "InventecCorporation" /t http://timestamp.digicert.com/scripts/timestamp.dll'
+    argument = argument.split(' ')
+    command.extend(argument)
+
+    if not os.path.exists(file_path):
+        return f"File not found. Please upload it first."
+
+    command.extend([file_path])
     try:
         result = subprocess.run(command, check=True, capture_output=True, text=True)
         flash('App executed successfully: ' + result.stdout, 'success')
     except subprocess.CalledProcessError as e:
         flash('Failed to execute app: ' + e.stderr, 'danger')
     print(result.stdout)
-    return redirect(url_for('index'))
+    redirect(url_for('index'))
+    os.remove(file_path)
+    return f"App executed successfully: '{filename}'"
 
 if __name__ == '__main__':
     with app.app_context():

@@ -9,10 +9,10 @@
     <div class="container">
         <h1>Upload File for cab sign</h1>
         <form id="uploadForm">
-            <input type="file" name="file" id="fileInput">
+            <input type="file" name="file" id="fileInput" required>
             <input type="submit" value="Upload">
         </form>
-        <form action="{{ url_for('execute_app') }}" method="post">
+        <form id="executeForm">
             <input type="text" name="argument" placeholder="Input argument...">
             <input type="submit" value="Execute App from Server">
         </form>
@@ -104,19 +104,58 @@
 <script>
     document.getElementById("uploadForm").addEventListener("submit", async function(event) {
         event.preventDefault(); // 阻止表單直接提交
-    
+
         let formData = new FormData(this);
-    
-        let response = await fetch("/upload", {
-            method: "POST",
-            body: formData
-        });
-    
-        let result = await response.text(); // 取得後端回應
-        document.getElementById("modalMessage").innerText = result;
-        document.getElementById("customModal").style.display = "block";
+
+        try {
+            // Step 1: Upload the file
+            let uploadResponse = await fetch("/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            let uploadResult = await uploadResponse.text();
+
+            // Display upload response in modal
+            showModal(uploadResult);
+
+        } catch (error) {
+            console.error("Upload Error:", error);
+            showModal("Upload failed. Please try again.");
+        }
     });
-    
+
+    document.getElementById("executeForm").addEventListener("submit", async function(event) {
+        event.preventDefault(); // 阻止表單直接提交
+
+        let formData = new FormData(this);
+
+        try {
+            // Step 2: Execute the app
+            let executeResponse = await fetch("/execute", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams(formData)
+            });
+
+            let executeResult = await executeResponse.text();
+
+            // Display execution response in modal
+            showModal(executeResult);
+
+        } catch (error) {
+            console.error("Execution Error:", error);
+            showModal("Execution failed. Please try again.");
+        }
+    });
+
+    // Function to display modal
+    function showModal(message) {
+        document.getElementById("modalMessage").innerText = message;
+        document.getElementById("customModal").style.display = "block";
+    }
+
+    // Function to close modal
     function closeModal() {
         document.getElementById("customModal").style.display = "none";
     }
