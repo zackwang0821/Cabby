@@ -6,7 +6,13 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email
 import os
+import sys
+import ctypes
+import pyautogui
+import time
+import pyperclip
 import subprocess
+import pygetwindow as gw
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'Folder'
@@ -105,33 +111,100 @@ def upload_file():
 @login_required
 def execute_app():
     argument = request.form.get('argument', '')
-    command = ['hello.exe']
+    command = 'signtool.exe '
+    target_program = "Token Logon"
     
     filename = session.get('uploaded_filename', None)
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if filename:
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-    if argument:
+    if not argument:
+        argument = 'sign /a /fd sha256 /n "Inventec Corporation" /t http://timestamp.digicert.com/scripts/timestamp.dll '        
+        command += argument
+
+        if not filename or not os.path.exists(file_path):
+            return f"File not found. Please upload it first."
+
+        command += f"{file_path}"
+    
+        with open("PW.txt", "r", encoding="utf-8") as file:
+            password = file.read()
+            pyperclip.copy(password)
+    
+        try:
+            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+            time.sleep(2)
+
+            windows = gw.getWindowsWithTitle("")
+            for win in windows:
+                if target_program.lower() in win.title.lower():
+                   print(f"find windows：{win.title}")
+                   win.activate()
+                   break
+            else:
+                print(f"windows not found：{target_program}")
+        
+            pyautogui.hotkey('ctrl', 'v') #PW:Iec+12345678
+            pyautogui.press('enter')
+
+            time.sleep(3)
+            stdout, stderr = process.communicate()
+            return_code = process.returncode
+
+        except Exception as e:
+            print(f"unexcept error：{e}")
+            return -1, "", str(e)
+    
+      # if filename:
+      #     if os.path.exists(file_path):
+      #         os.remove(file_path)
+      #         session.pop('uploaded_filename', None)
+          
+    else:
         print('Executing app with argument: ' + argument, 'info')
-    else :
-        argument = 'sign /a /n "InventecCorporation" /t http://timestamp.digicert.com/scripts/timestamp.dll'
-    argument = argument.split(' ')
-    command.extend(argument)
+        command += argument
+        try:
+            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout, stderr = process.communicate()
+            return_code = process.returncode
 
-    if not os.path.exists(file_path):
-        return f"File not found. Please upload it first."
+        except Exception as e:
+            
+            print(f"unexcept error：{e}")
+            return -1, "", str(e)
 
-    command.extend([file_path])
-    try:
-        result = subprocess.run(command, check=True, capture_output=True, text=True)
-        flash('App executed successfully: ' + result.stdout, 'success')
-    except subprocess.CalledProcessError as e:
-        flash('Failed to execute app: ' + e.stderr, 'danger')
-    print(result.stdout)
     redirect(url_for('index'))
-    os.remove(file_path)
-    return f"App executed successfully: '{filename}'"
+    
+    if return_code == 0:
+        return stdout
+    else:
+        return stderr
+
+def elevate_to_admin():
+    """Re-run the script as an administrator."""
+    if os.name == 'nt':  # Windows only
+        params = ' '.join(sys.argv)  # Get script arguments
+        os.system(f'powershell Start-Process python -Verb RunAs -ArgumentList "{params}"')
+        sys.exit()  # Exit current instance
+
+    # Check if the script is running as admin
+    try:
+        import ctypes
+        if not ctypes.windll.shell32.IsUserAnAdmin():
+            print("Re-running as administrator...")
+            elevate_to_admin()
+    except Exception as e:
+        print(f"Admin check failed: {e}")
 
 if __name__ == '__main__':
+    
+    try:
+        import ctypes
+        if not ctypes.windll.shell32.IsUserAnAdmin():
+            elevate_to_admin()
+    except Exception as e:
+        print(f"Error: {e}")
     with app.app_context():
         db.create_all()  # Create database tables
     app.run(host='0.0.0.0', port=8000)
