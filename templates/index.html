@@ -16,6 +16,12 @@
             <input type="text" name="argument" placeholder="Input argument...">
             <input type="submit" value="Execute App from Server">
         </form>
+        <label for="file-select">select file：</label>
+        <select id="file-select">
+            <option value="" disabled selected>select file</option>
+        </select>
+        
+        <button id="download-btn" disabled>Download</button>
     </div>
     <div id="customModal" class="modal">
         <div class="modal-content">
@@ -113,7 +119,7 @@
 
 <script>
     document.getElementById("uploadForm").addEventListener("submit", async function(event) {
-        event.preventDefault(); // 阻止表單直接提交
+        event.preventDefault(); 
 
         let formData = new FormData(this);
 
@@ -136,7 +142,7 @@
     });
 
     document.getElementById("executeForm").addEventListener("submit", async function(event) {
-        event.preventDefault(); // 阻止表單直接提交
+        event.preventDefault(); 
 
         let formData = new FormData(this);
 
@@ -169,4 +175,36 @@
     function closeModal() {
         document.getElementById("customModal").style.display = "none";
     }
+
+    document.addEventListener("DOMContentLoaded", function () {
+            const fileSelect = document.getElementById("file-select");
+            const downloadBtn = document.getElementById("download-btn");
+
+            fetch("/files")
+                .then(response => response.json())
+                .then(files => {
+                    if (files.error) {
+                        alert("failed to load file list：" + files.error);
+                        return;
+                    }
+                    files.forEach(file => {
+                        const option = document.createElement("option");
+                        option.value = file;
+                        option.textContent = file;
+                        fileSelect.appendChild(option);
+                    });
+                })
+                .catch(error => alert("loading error：" + error));
+
+            fileSelect.addEventListener("change", function () {
+                downloadBtn.disabled = fileSelect.value === "";
+            });
+
+            downloadBtn.addEventListener("click", function () {
+                const selectedFile = fileSelect.value;
+                if (selectedFile) {
+                    window.location.href = "/download/" + selectedFile;
+                }
+            });
+        }); 
 </script>

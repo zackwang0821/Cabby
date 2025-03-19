@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for, render_template, flash, session
+from flask import Flask, request, redirect, url_for, render_template, flash, session, jsonify, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -180,6 +180,22 @@ def execute_app():
         return stdout
     else:
         return stderr
+
+@app.route('/files', methods=['GET'])
+@login_required
+def list_files():
+    """list UPLOAD_FOLDER *.cab file"""
+    try:
+        files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.endswith('.cab')]
+        return jsonify(files)
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/download/<filename>', methods=['GET'])
+@login_required
+def download_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+
 
 def elevate_to_admin():
     """Re-run the script as an administrator."""
